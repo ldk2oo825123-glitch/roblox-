@@ -1,1 +1,0 @@
--- Task T4 fills the ShopUI client script.

@@ -9,8 +9,8 @@ local function deep(a,b)
  for k,v in pairs(a) do deep(v,b[k]) end
  for k in pairs(b) do eq(a[k]~=nil,true) end
 end
-local legacy={Cash=120,SpeedLevel=3,CashLevel=2,Brainrots={}}
-for i=1,8 do legacy.Brainrots[i]={Name='Sigma Frog',Value=999} end
+local legacy={cash=120,speed=3,cashBoost=2,stored={}}
+for i=1,8 do legacy.stored[i]={name='Sigma Frog',value=3} end
 local migrated=L.migrate(legacy)
 eq(migrated.cash,120);eq(migrated.upgrades.Speed,3);eq(migrated.upgrades.Cash,2)
 eq(#migrated.pedestals,6);eq(#migrated.inventory,2)
@@ -43,7 +43,7 @@ eq(#clean.inventory,0);eq(clean.pedestals[2].id,'bag');eq(clean.pedestals[6].id,
 eq(clean.indexFound.bad,nil);eq(clean.indexFound['Sigma Frog|Gold'],true)
 local partial=L.deserialize({version=2,inventory='bad',pedestals=false,wheel={potions=false},upgrades=7})
 eq(partial.cash,0);eq(partial.upgrades.Health,0);eq(partial.wheel.lastSpinAt,0)
-local retired=L.migrate({Brainrots={{Name='Retired Tier',Value=77},{Name='Noodle Goblin',Variant='Gold',Value=100}}})
+local retired=L.migrate({stored={{name='Retired Tier',value=77},{name='Gold Noodle Goblin',value=1.1}}})
 eq(retired.pedestals[1].value,77);eq(retired.pedestals[2].value,1.1)
 eq(retired.indexFound['Retired Tier|Normal'],nil)
 local IL=dofile('src/ReplicatedStorage/InventoryLogic.lua').new(C,true)
@@ -74,14 +74,14 @@ eq(P.setUpgradeLevel(player,'Unknown',1),false);eq(P.setUpgradeLevel(player,'Spe
 for _,upgrade in ipairs(C.Shop.Upgrades)do eq(P.setUpgradeLevel(player,upgrade.Name,10),true)end
 p.wheel.potions={JumpBoost=900,SpeedBoost=900,HealthBoost=900,DoubleMoney=900,RagdollResist=900,KnockbackResist=900}
 local stats=P.applyStats(player)
-eq(stats.WalkSpeed,54);eq(stats.JumpPower,70);eq(humanoid.JumpPower,C.Jump.MaxEffectiveJumpPower)
-eq(stats.MaxHealth,450);eq(stats.IncomeMult,7);eq(stats.RagdollReduction,0.9);eq(stats.KnockbackReduction,0.9)
-eq(humanoid.Health,100) -- prior max-health application already clamped, never heals.
+eq(stats.WalkSpeed,44);eq(stats.JumpPower,125);eq(humanoid.JumpPower,125)
+eq(stats.MaxHealth,400);eq(stats.IncomeMult,7);eq(stats.RagdollReduction,0.9);eq(stats.KnockbackReduction,0.9)
+eq(humanoid.Health,400) -- Real ShopServer adds the increase in max health.
 local expired=P.getEffectiveStats(player);p.wheel.potions={};expired=P.applyStats(player)
-eq(expired.WalkSpeed,36);eq(expired.JumpPower,65);eq(expired.MaxHealth,350)
+eq(expired.WalkSpeed,36);eq(expired.JumpPower,100);eq(expired.MaxHealth,350)
 local respawnHumanoid={Health=100}
 local respawn={WaitForChild=function()return respawnHumanoid end,FindFirstChildOfClass=function()return respawnHumanoid end}
 player.Character=respawn;player.CharacterAdded:Fire(respawn)
-eq(respawnHumanoid.WalkSpeed,36);eq(respawnHumanoid.JumpPower,65);eq(respawnHumanoid.MaxHealth,350)
+eq(respawnHumanoid.Health,350);eq(respawnHumanoid.WalkSpeed,36);eq(respawnHumanoid.JumpPower,100);eq(respawnHumanoid.MaxHealth,350)
 P.Remove(player);eq(P.addCash(player,1),false);eq(player.CharacterAdded.listeners[1].connected,false)
 print('PASS: '..checks..' profile/economy/stat checks')

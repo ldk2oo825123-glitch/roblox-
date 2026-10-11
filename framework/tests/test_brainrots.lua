@@ -4,7 +4,7 @@ local L=dofile('src/ReplicatedStorage/BrainrotLogic.lua').new(C)
 local checks=0
 local function eq(a,b) assert(a==b,tostring(a)..' ~= '..tostring(b));checks=checks+1 end
 for i=1,5 do local low,high=L.band(i);eq(low,(i-1)*160);eq(high,i*160) end
-for _,r in ipairs({{0,'Normal'},{0.804999,'Normal'},{0.805,'Gold'},{0.905,'Diamond'},{0.955001,'Emerald'},{0.985001,'Rainbow'},{0.999999,'Rainbow'}}) do eq(L.rollVariant(r[1]),r[2]) end
+for _,r in ipairs({{0,'Normal'},{80/99.5-0.000001,'Normal'},{80/99.5,'Normal'},{80/99.5+0.000001,'Gold'},{90/99.5+0.000001,'Diamond'},{95/99.5+0.000001,'Emerald'},{98/99.5+0.000001,'Rainbow'},{0.999999,'Rainbow'}}) do eq(L.rollVariant(r[1]),r[2]) end
 local pits={{MinX=-10,MaxX=10,MinZ=20,MaxZ=40}}
 eq(L.overPit(0,30,pits),true);eq(L.overPit(10,40,pits),true);eq(L.overPit(11,30,pits),false)
 local calls=0

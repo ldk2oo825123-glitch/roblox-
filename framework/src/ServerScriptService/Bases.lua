@@ -24,7 +24,7 @@ local function income(player, state)
 	for slot, item in pairs(state.pedestals) do values[slot] = item.value end
 	local ordinary = Logic.incomePerTick(state, one)
 	local total = Wheel.getIncome(player, values, ordinary)
-	return math.floor(total * Config.Math.ValueRoundingScale + one / (one + one)) / Config.Math.ValueRoundingScale
+	return math.floor(total)
 end
 -- Minimal 67 hook: overlays the first empty ordinary pedestal, without reserving
 -- or storing an Item. If all six are occupied, the slot-one label also shows 67.

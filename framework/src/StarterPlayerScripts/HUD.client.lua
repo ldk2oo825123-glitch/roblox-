@@ -1,1 +1,0 @@
--- Task T2 fills the HUD client script.

@@ -23,7 +23,7 @@ os.time = function() return clock end
 math.clamp = function(n, lo, hi) return math.max(lo, math.min(n, hi)) end
 typeof = function(value) return type(value) == "table" and value.kind or type(value) end
 Random = { new = function() return { NextInteger = function(_, lo, hi)
-	equal(lo, 1); equal(hi, 10000); return nextRoll
+	equal(lo, 1); equal(hi, nextRoll == 9467 and 9467 or (clock >= 272800 and 9400 or 9467)); assert(nextRoll <= hi); return nextRoll
 end } end }
 local remotes = {}
 local updates = {}
@@ -74,15 +74,15 @@ clock = 100899; RunService.Heartbeat:Fire(); equal(player.attributes.WalkSpeed, 
 clock = 100900; RunService.Heartbeat:Fire(); equal(player.attributes.WalkSpeed, 16)
 equal(profile.wheel.potions.SpeedBoost, nil)
 clock = 186399; equal(remotes.SpinWheel.OnServerInvoke(player).remainingSeconds, 1)
-clock = 186400; nextRoll = 10000
+clock = 186400; nextRoll = 9467
 response = remotes.SpinWheel.OnServerInvoke(player)
 equal(response.ok, true); equal(response.rewardName, "Brainrot67"); equal(profile.wheel.owns67, true)
 equal(Wheel.getIncome(player, {1, 84}, 85), 169)
 equal(Wheel.getIncome(player, {1}, 1), 2)
-equal(Wheel.getIncome(player, {}, 0), 0)
-clock = 272800
+equal(Wheel.getIncome(player, {}, 0), 1)
+clock = 272800; nextRoll = 9400
 response = remotes.SpinWheel.OnServerInvoke(player)
-equal(response.outcome, "already owned"); equal(profile.wheel.lastSpinAt, 272800)
+equal(response.outcome, "granted"); equal(profile.wheel.lastSpinAt, 272800)
 equal(remotes.SpinWheel.OnServerInvoke(player).remainingSeconds, 86400)
 local state = Wheel.getState(player)
 state.potions.JumpBoost = clock + 900
@@ -90,7 +90,7 @@ state.potions.RagdollResist = clock + 900
 state.potions.KnockbackResist = clock + 900
 state.potions.DoubleMoney = clock + 900
 Wheel.setState(player, state)
-equal(player.attributes.JumpPower, 70); equal(player.attributes.RagdollReduction, 0.9)
+equal(player.attributes.JumpPower, 125); equal(player.attributes.RagdollReduction, 0.9)
 equal(player.attributes.KnockbackReduction, 0.9)
 equal(Wheel.getIncome(player, {84}, 84), 336)
 state.potions.DoubleMoney = 0
@@ -101,7 +101,7 @@ equal(remotes.GetWheelState.OnServerInvoke(player, true).ok, false)
 clock = clock + 900
 equal(Wheel.getIncome(player, {84}, 84), 168) -- correct even before scheduler fires
 RunService.Heartbeat:Fire()
-equal(player.attributes.JumpPower, 65); equal(player.attributes.RagdollReduction, 0.8)
+equal(player.attributes.JumpPower, 100); equal(player.attributes.RagdollReduction, 0.8)
 equal(player.attributes.KnockbackReduction, 0.8)
 local saved = Wheel.getState(player)
 Wheel.Init(player, saved, profile)

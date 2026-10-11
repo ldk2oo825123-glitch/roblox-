@@ -1,311 +1,123 @@
-# Task Tracker
+# Framework task tracker
+
+`game-scripts/` is the real playable game's extracted script set and the source
+of truth. `framework/` is a separate tested logic library. Do not mix the two
+script sets in one place. See [COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
 | Task | Scope | State |
 |---|---|---|
-| T0 | Foundation | Implemented; local checks passed; Studio verification pending |
-| T1 | Daily Wheel | Implemented; local checks passed; Studio and T2/T3/T5 integration pending |
-| T2 | Inventory completion | Implemented; Lua/mock checks passed; Studio and MapBuilder/Wall/T3 integration pending |
-| T3 | Save-schema audit | Implemented; Lua/fake-store checks passed; Studio/DataStore verification pending |
-| T4 | Balance and edge audit | Implemented; Lua/JSON checks passed; Studio verification pending |
-| T5 | Hardening | Not started |
-| T7 | Wall, Home, HUD, Warning (currently empty placeholders) | Not started |
-| T8 | MapBuilder and Shop (currently empty placeholders) | Not started |
+| T0 | Foundation and isolated Rojo mapping | Implemented; local mapping checks pass |
+| T1 | Daily Wheel | The real Wheel already existed; framework version is a tested mirror, updated by T9 |
+| T2 | Inventory, Index, spawn/base adapters | Implemented; local checks pass; adapter limitations below |
+| T3 | Profiles and saving | Implemented; T9 real v1 migration and read-only fallback verified with fake stores |
+| T4 | Balance | Earlier guessed decisions superseded by T9 real-script values |
+| T5 | Additional hardening | Not started |
 | T6 | Optional polish | Not started |
+| T7 | Wall, home and associated HUD/warning UI | Superseded by game-scripts/; empty framework modules removed |
+| T8 | Map and shop runtime/UI | Superseded by game-scripts/; empty framework modules removed |
+| T9 | Align tested library with real game | Implemented; all local tests pass; no Studio verification |
 
-## T0 — Foundation
+## T9 changes and changed expectations
 
-Created Config, Remotes, BrainrotData, the remaining server/client placeholders,
-the Rojo project, and the remote-contract document header. MapBuilder is included
-as the server module explicitly required by the closing sentence of section 7.
-Main and client placeholders are scripts; other server placeholders are modules.
-The remote allowlist is intentionally empty until feature contracts are defined.
+- Config cites real source files. Normal is weight 80, normalized alongside
+  10/5/3/1.5 by 99.5; it no longer receives an invented probability remainder.
+  Tier/variant base RGB, materials and label RGB follow BrainrotServer/catalog.
+- Wall weights are 22/22/20/15/12/9 and warning time is always 5 within the 20s
+  wait. Damage is floor(60+t*340), ragdoll is 2+t*7, horizontal fling magnitude
+  is 60+t*300 toward the safe zone, and vertical fling is 50+t*150. Hit cooldown
+  is 2.5s. Balance.wallSpeed samples the inclusive one-decimal tier grid from a
+  uniform supplied roll. Wall speed/tier helpers are pure library functions.
+- Both resists use max(.1,1-.08*(level+(activePotion and 5 or 0))). Convenience
+  reduction attributes are one minus this multiplier. Tests check every level
+  0..10 with and without potions. The previous reduction policy was removed.
+- Exact ShopConfig.Items rows and WheelConfig.Rewards rows are retained. Shop
+  helpers use per-row growth 1.6/1.7/1.7/1.8/1.8/1.8 and the real base prices,
+  levels and effects; tests compare all purchase levels 0..10 to real ShopConfig.
+  Jump is 50+5*level, reaching 100, or 125 with a potion. The suggested 65–70
+  jump cap is inactive. Cash display percents and resist display percents are
+  translated into income bonus and resist levels in framework Upgrades.
+- Wheel weights are 18/18/16/14/14/14/.67, scaled by 100 for exact integer RNG.
+  Tests enumerate all 9467 unowned rolls and all 9400 owned rolls. Owned 67 is
+  excluded from the pool. Potion effects are +8 speed, x2 money, +50 health,
+  +5 ragdoll/knockback levels and +25 jump. Grants extend max(now,expiry)+900
+  without a cap; cooldown remains 86400. Dynamic 67 value has the real minimum
+  of 1 and considers supplied ordinary pedestal values only.
+- Carry is limited to 3 with a `carry full` reason and unchanged state on refusal.
+  Safe inventory remains unlimited. The 10,000-item test now uses authorized
+  carry/deposit batches, not an impossible bulk carried fixture. All 25 Index
+  combinations remain tested, depositing between pickups. Spawn counts are
+  10/8/6/4/2; respawn is 8s, income interval 5s and pedestal count 6.
+- Base payout tests now expect the floored multiplied sum, as real BaseServer
+  does, while individual fractional item values remain intact. Health tests now
+  expect ShopServer's added max-health difference and full health on respawn.
+  Unrelated cash, invalid-input, lifecycle, lock, sparse-slot and cleanup checks
+  remain in place. Snapshot copies retain appearance scalars.
+- Saving writes BrainrotPlayerData_v2 only, with Player_<UserId> keys. Main passes
+  BrainrotPlayerData_v1 separately for GetAsync-only first-load fallback. Failed
+  reads create no default save; concurrent v2 data wins over the v1 read. Existing
+  retries, failed-load refusal, future-schema refusal, autosave, session claims,
+  departure ordering and shutdown-budget checks remain tested.
+- ProfileLogic migrates the real flat v1 fields, parses variant name prefixes,
+  expands stacks into fresh IDs, preserves RGB/material, converts discoveries
+  and cooldown timestamps, and drops expired boosts. Six stored items become
+  pedestals; overflow is kept in inventory. 67 entries become ownership only.
+  Unknown discovered names are retained for diagnostic reverse export.
+  toLegacyV1 exports real-shaped records without writing them to any store.
+- The new synthetic fixture has three Gold Sigma Frogs, two Diamond Turbo
+  Toasts, eight stored items, 67 ownership and active/expired boosts. It verifies
+  all 13 ordinary items, fresh unique IDs, all six levels, cash, discoveries,
+  nextSpin, active expiry times and appearance survive migration, v2 codec,
+  inventory copy and reverse export. Expired boosts are intentionally removed.
+- Removed seven empty framework server/client placeholders and their mappings.
+  Main's remaining geometry note now refers to an adapter. README and remote
+  contracts describe the library accurately; COMPATIBILITY maps all nine real
+  remotes, flat save fields, real attributes and deliberate adapter differences.
 
-Verified locally:
-
-- `python3 -m json.tool default.project.json` succeeds.
-- Every source file is mapped exactly once, with no missing or additional paths.
-- Numeric code literals occur only in Config; all placeholders have task headers.
-- Executed Config unchanged and the helpers with type annotations removed in Lua:
-  all tier/variant combinations pass, including the specified Sigma Frog examples.
-  Unknown lookups return nil and invalid value requests raise errors.
-- Mocked remote setup creates/reuses its folder, rejects unknown remote names,
-  and rejects client-side setup.
-- Inspected the written files against the exclusions in the spec.
-- The protected binary and chat log retain their original SHA-256 hashes.
-
-Unverified: Roblox Studio execution/playtesting, native Luau type checking,
-Rojo build/sync, actual Roblox remote replication, and all later feature behavior.
-Studio, native Luau, and Rojo are unavailable here. Lua tests remove type
-annotations and mock Roblox services; they do not establish engine correctness.
-
-Unresolved spec inputs: numerical wall weights, precise colour RGB values,
-fling magnitudes, shop starting prices/price curve, unspecified movement/health
-baselines, and geometry dimensions/boundaries. Config preserves the stated
-qualitative values and marks missing values nil with TODOs rather than inventing
-balance choices. Approximate variant odds are preserved without normalization;
-their total leaves a probability remainder for the balance audit. Wheel settings
-remain TODO(T1). Placeholder task headers identify the closest later task; the
-MapBuilder implementation and shop completion still require explicit assignment.
-
-
-## T4 — Balance and edge decisions
-
-Resolved all T4 nil/TODO fields in Config using the delegated decisions:
-movement/health baselines, five equal rarity bands, exact wall and variant RGB
-colours, integer wall weights, horizontal/upward fling endpoints, shop base
-prices and exponential price curve. Config comments document the jump step
-reduction and potion-inclusive hard cap, longer INSANE/LIGHTSPEED warnings,
-intentional upper-LIGHTSPEED lethality at maximum health, client-side Rainbow
-label/inventory-dot cycling, and one-decimal base sign income.
-
-Added engine-independent Balance helpers and the explicit Rojo module mapping.
-Usage in Roblox: `require(Balance).new(require(Config))`; dependency injection
-keeps the helpers free of Roblox APIs. `pickWallTier` takes an integer roll from
-1 through 100 and returns its tier record. Scaling helpers clamp out-of-range
-speeds to the configured endpoints. The price helper takes the Config upgrade
-name and a non-negative integer purchase count. All helper numeric constants
-come from Config; test literals are independent expected-value fixtures.
-
-Verified locally with real output:
-
-```text
-$ lua tests/test_balance.lua
-PASS: 269 balance checks
-$ python3 -m json.tool default.project.json >/dev/null
-(exit 0; no output)
-$ python3 [Config/Rojo assertion check]
-PASS: JSON valid; Balance mapped; no T4 nil/TODO fields (T1 wheel nils retained)
-```
-
-Tests cover all integer wall rolls against tier weights, damage/ragdoll linearity
-and endpoints, fling endpoints/midpoint, all initial shop prices, Speed's second
-price, K/M/B formatting, jump level 10, maximum health, variant odds summing to
-1.0, warning durations, and invalid helper inputs. Color3 is stubbed only while
-loading Config; Balance runs unchanged in plain Lua.
-
-Unverified: Roblox Studio execution/playtesting, native Luau strict type checking,
-Rojo build/sync, character geometry and collision clearance under actual gravity,
-and runtime application of jump/potion clamps, warnings, fling direction,
-Rainbow cycling, and income formatting. The clamp is Config policy for future
-runtime consumers; this task does not implement those placeholder systems.
-The T0 unresolved-input notes above are historical and superseded by these T4
-choices. Wheel nil/TODO(T1) fields remain intentionally untouched: interpreting
-"zero nil" literally would require out-of-scope T1 reward decisions. No .rbxl,
-chat-log.txt, or unrelated source files were changed. No commits/push/deploy.
-
-
-## T1 — Daily Wheel
-
-Implemented Config.Wheel policy: 24-hour cooldown, six 900-second potions,
-3600-second remaining-time stacking cap, six weights of 1660 and Brainrot67
-weight 40 (total 10000). Added pure injected WheelLogic, server Wheel authority,
-client panel/animation/countdown/potion strip, three allowlisted/documented
-remotes, and Rojo mapping. Main starts the wheel with fresh session profiles;
-this small startup change makes T1 runnable without implementing other systems.
-
-Wheel exposes Init/getState/setState/getProfile, owns67-only profile storage,
-combined upgrade/potion stats, and a per-tick getIncome hook that recomputes 67
-from supplied current ordinary pedestal values. Character spawn reapplies
-potions; a single shared Heartbeat expiry scheduler removes expired potions,
-reverts modifiers and publishes state. Player departure disconnects character
-listeners and removes session state. The client fetches a snapshot to avoid
-missing the initial event, and animates only a server-chosen result.
-
-Verified locally with actual output:
+## Verification (actual final local output)
 
 ```text
-$ lua tests/test_balance.lua
-PASS: 269 balance checks
-$ lua tests/test_wheel.lua
-PASS: 187 wheel checks (all 10000 rolls enumerated)
-$ lua tests/test_wheel_server.lua
-PASS: 51 wheel server mock checks (not Roblox replication)
-$ python3 -m json.tool default.project.json >/dev/null
-(exit 0; no output)
-$ python3 [Config/Rojo assertion check]
-PASS: JSON valid; every source mapped once; Wheel policy has no nil fields
-```
-
-Pure tests cover exact cooldown/expiry boundaries, every weighted roll,
-stacking/remaining-time cap, all potion modifiers, combined reduction/jump caps,
-changing/empty/sparse pedestal values, duplicate 67 and saved-state validation.
-Server mocks execute Wheel.lua with only Luau type syntax removed: caller/readiness
-and argument rejection, server RNG bounds, cooldown consumption, duplicate 67
-without refund, live profile mutation, detached snapshots, expiry cleanup,
-per-tick income, replacement state, respawn-listener cleanup and one scheduler
-across repeated Start/Init. These mocks do not establish Roblox engine behavior.
-
-Unverified/pending: Studio execution/playtesting, native Luau strict type checking,
-Rojo build/sync, actual engine replication, UI appearance/animation and actual
-character respawn/health/physics. Studio, Luau and Rojo are unavailable here.
-Bases, Shop, Wall and Saving are still pre-existing placeholders. Actual income
-ticks must call getIncome, Shop purchases must call Refresh and Wall must consume
-reduction attributes. T3 must replace Main's fresh Init with successful profile
-load and save profile.wheel before cleanup. Consequently cross-session saving
-and the physical 67/income presentation are pending integration, not verified
-acceptance. 67 currently exists only as a protected ownership flag, with no
-inventory/Index/variant/drop/death-loss path or cached saved value. Absolute
-expiry timestamps deduct offline elapsed time on restore.
-
-No .rbxl or chat-log.txt edits; no commits, pushes, deployment or Replit access.
-
-
-## T2 — Inventory v2, pickups, bases and Index
-
-Implemented injected pure InventoryLogic and BrainrotLogic; authoritative
-Inventory, Brainrots and Bases adapters; shared world labels; Inventory/Index
-clients and their shared snapshot bootstrap. Registered/documented all five T2
-remotes and mapped every new module in Rojo. Main initializes these systems with
-fresh session state; no persistence is claimed. Config now owns interaction,
-spawn, ground-drop and UI constants, plus clearly marked TODO(T4-geometry)
-safe-zone/base/danger coordinates that MapBuilder/Studio must match. Wall only
-received the requested onRagdoll integration TODO. No binary/chat-log edits,
-commits, pushes, deployment, messages or Replit connection were performed.
-
-Inventory state has unique item IDs, unlimited safe inventory, carried drops on
-death/ragdoll, exact-ID drop, pedestal round trips, variant groups and persistent
-Index keys. Safe-zone conversion is server-only and position-checked. Ground
-drops preserve items, expire after 40s and have a 2s owner-only pickup lock.
-Brainrots use tier bands, server variant rolls, 8s same-tier respawns and pit-rect
-exclusion. Bases assigns five plots, rejects a sixth player, uses owner-only
-client prompts plus independent server access checks, clears departing plots,
-and computes rounded income through Wheel.getIncome. SetCashHandler is the
-explicit future Shop/Saving cash-credit hook; without a handler it credits no
-cash. Show67 overlays an empty pedestal label (or shares slot one's label when
-full), recomputing WheelLogic.brainrot67Value without creating an Item, consuming
-an ordinary slot, or unlocking Index entries.
-
-Verified locally with actual final outputs:
-
-```text
-$ for test in tests/*.lua; do lua "$test" || exit; done
-PASS: 269 balance checks
+$ cd framework && for t in tests/*.lua; do lua "$t" || exit; done
+PASS: 555 balance checks
 PASS: 71 base server mock checks (not Roblox geometry/prompts)
-PASS: 43 brainrot spawn checks
-PASS: 119 inventory checks (10000 inventory items; all 25 Index entries)
+PASS: 44 brainrot spawn checks
+PASS: 125 inventory checks (10000 inventory items; all 25 Index entries)
 PASS: 49 inventory server mock checks (not Roblox replication)
-PASS: 187 wheel checks (all 10000 rolls enumerated)
+PASS: 122 real v1 migration checks (13 ordinary items preserved; 8 stored; stacked variants; 67; boost expiry; RGB/material round trip)
+PASS: 189 profile/economy/stat checks
+PASS: 186 saving fake-store/lifecycle checks
+PASS: 195 wheel checks (all 9467 rolls enumerated)
 PASS: 51 wheel server mock checks (not Roblox replication)
 $ python3 -m json.tool default.project.json >/dev/null
 (exit 0; no output)
-$ python3 [source/Rojo mapping assertions]
-PASS: JSON valid; every source mapped exactly once
+$ python3 [mapping/hash/obsolete-source assertions]
+PASS: JSON valid; all 20 framework source files mapped exactly once
+PASS: all 20 extracted Lua scripts retain their before-task SHA-256 hashes; script file set unchanged
+PASS: deleted sources unmapped; obsolete policy identifiers absent from framework sources
 ```
 
-Acceptance coverage:
+All 10 test files pass, with 1,587 reported checks plus exhaustive wheel loops.
+Before-task script hashes were captured in /tmp/t9-game-before.sha256; no git
+commands were used. game-scripts/ was never edited. The two non-Lua files there
+were not edited; their before-task hashes were not captured. No .rbxl or chat-log
+changes, commits, pushes, deployment, external messages or Replit access.
 
-- Pure and actual Inventory adapter mocks: carried-only Index stays locked;
-  safe-zone position outside refuses conversion and inside converts; death and
-  ragdoll empty carried while preserving inventory; 10,000-item transfer retains
-  all items with no capacity limit. Touch pickup is always to carried first.
-- Pure and Inventory adapter mocks: pedestal round trip preserves all four item
-  fields; invalid/occupied/empty slots and missing inventory IDs fail; non-owner,
-  no-base, out-of-range requests fail. Inventory drop removes one exact ID while
-  another identical tier/variant survives. Malformed arguments and cooldown fail.
-- Pure: first inventory entry and pedestal pickup mark Index, carried-only death
-  does not mark it, all 25 combinations unlock exactly 25 entries; variants have
-  separate groups; multiplier income rounds to one decimal; best value changes
-  after removal. Saved-state validation rejects duplicates/invalid items/slots;
-  copied state and snapshots do not alias the caller's tables.
-- Inventory adapter mocks: death hookup, removal cleanup, ground expiry, owner
-  pickup lock, immediate other-player pickup, repeated-touch consumption guard,
-  event-position drop, no-character touches, snapshot bootstrap and readiness.
-- Pure spawn tests: all five rarity bands, variant odds boundaries, pit edges,
-  retry after obstructed samples, fully obstructed bands skip rather than spawn
-  over pits. Actual Brainrots scheduling and touch adapter remain unverified.
-- Actual Bases adapter mocks: five assignments, sixth rejection, six configured
-  prompts, owner attributes, freed plot reuse, label cleanup, income interval
-  callback, rounded multiplier income and live/removed/duplicate-call 67 label
-  updates. Prior balance/wheel tests all still pass.
+## Still unverified and known adapter limits
 
-Unverified / integration still required:
-
-- **No Studio/engine/replication testing; UI never rendered.** Native Luau strict
-  type checking and Rojo build/sync are unavailable here. Lua service mocks do
-  not prove engine behavior or replication and do not type-check Luau.
-- Actual safe-zone entry/touch timing, ragdoll/death physics and event positions,
-  world-part pickup/expiry, spawn respawn scheduling, pit relocation, character
-  spawning/teleport and five/six real-player lifecycle behavior require Studio.
-- MapBuilder is intentionally untouched and remains a placeholder. It must
-  supply real pit rectangles to Brainrots.SetPitRects before Start and match the
-  Config TODO geometry. Main currently supplies no pit rectangles/floor map.
-- Wall remains a placeholder; actual wall ragdoll integration must call
-  Inventory.onRagdoll before fling and own the Ragdolled attribute lifecycle.
-- Shop/Saving must install Bases.SetCashHandler for actual cash credits. Saving
-  must load/migrate profiles, initialize Wheel then Inventory, encode/decode
-  sparse pedestal keys and save snapshots before session cleanup. Persistence,
-  rejoin recovery and actual DataStore failure behavior belong to T3.
-- Inventory/Index appearance, grouped item selection, G and DROP, E picker/pickup,
-  owner-only prompt visibility, refusal popups, rainbow cycling, Index I/button,
-  filtering counts, closed-panel progress visibility and the large full snapshot
-  payload at 10,000 items have not been tested in an engine/client.
-
-
-## T3 — Profile and saving
-
-Implemented version-2 ProfileLogic with an injected Config/BrainrotData/ID factory,
-detached table serialization, string-keyed disk pedestal slots, strict finite
-cash validation, sane defaults for absent/invalid levels, individually discarded
-malformed/duplicate items, sanitized wheel/Index state, and future-version refusal.
-Legacy v1 migration keeps cash/levels, recomputes known-tier values, defaults
-variants to Normal, assigns fresh GUIDs at runtime, and moves overflow past the
-six pedestals into inventory. Unknown legacy tiers retain their finite legacy
-value; Inventory enables the explicit legacy-tier policy and never counts those
-unknown tiers in Index. Ordinary InventoryLogic callers retain strict known-tier
-validation. Carried items are excluded from persistence.
-
-Added injected Profile economy/stat authority: non-yielding cash additions and
-atomic overspend rejection, validated upgrade setters, Config upgrade formulas,
-WheelLogic potion modifiers and clamps, Cash/effective-stat attributes, and
-character reapplication without free healing. Bases credits Profile.addCash.
-Wheel shares the loaded profile's upgrades and retains its potion expiry scheduler.
-
-Saving uses an injectable UpdateAsync store, configured exponential retries,
-per-session token/JobId/timestamp locks renewed on autosave, failed-load kicking
-without initializing/saving defaults, and future-version/changed-lock write refusal.
-Studio API-disabled errors warn and use ephemeral state; other failures still kick.
-Main starts managed Wheel/Inventory handlers and Bases first; successful join
-initializes Profile, Wheel, Inventory, then Bases. Saving owns departure ordering:
-snapshot/save/release before Bases, Inventory, Wheel, Profile cleanup. Standalone
-Wheel/Inventory startup retains its original cleanup behavior for earlier mocks.
-Autosave ticks every configured 60 seconds. BindToClose queues player saves in
-parallel and waits within the configured 25-second budget; in-flight DataStore
-calls cannot be cancelled, and failed saves retain their lock until lease expiry.
-
-Verified locally with real output:
-
-```text
-$ for f in tests/test_*.lua; do lua "$f" || exit; done
-PASS: 269 balance checks
-PASS: 71 base server mock checks (not Roblox geometry/prompts)
-PASS: 43 brainrot spawn checks
-PASS: 119 inventory checks (10000 inventory items; all 25 Index entries)
-PASS: 49 inventory server mock checks (not Roblox replication)
-PASS: 188 profile/economy/stat checks
-PASS: 153 saving fake-store/lifecycle checks
-PASS: 187 wheel checks (all 10000 rolls enumerated)
-PASS: 51 wheel server mock checks (not Roblox replication)
-$ python3 -m json.tool default.project.json >/dev/null
-(exit 0; no output)
-$ python3 [mapping/strict/numeric-literal assertions]
-PASS: JSON valid; all 27 source files mapped exactly once; new T3 modules strict with no numeric literals
-```
-
-New tests execute ProfileLogic, Profile and Saving unchanged in plain Lua.
-Coverage includes the cash-120/Speed-3/Cash-2/eight-item legacy fixture, sparse
-pedestal round trips, full upgrades/Index/wheel round trips, carried omission,
-corrupt/partial data, retired tiers, invalid cash and spend/upgrade inputs,
-potion-inclusive formulas and jump cap, failed load/no write, retry success,
-UpdateAsync transform reentry, lock conflicts/expiry/replacement, future-version
-refusal at load and save, departure during load, missing-state save refusal,
-retryable save failure, autosave cadence, five parallel shutdown saves, shutdown
-time budget, and Studio API-disabled versus generic-error behavior.
-
-Unverified: Studio playtesting, actual DataStore API access/serialization/network
-retries and cross-server lock contention, actual BindToClose engine scheduling,
-Roblox character/potion replication, native Luau strict type checking, and Rojo
-build/sync. No Studio, Luau or Rojo executables are available. Existing datastore
-name/key compatibility with the binary game's previous scripts cannot be checked
-without Studio; Config exposes StoreName/KeyPrefix for review. No remotes were
-added; docs/REMOTES.md, the .rbxl, and chat-log.txt were left untouched. No
-commits, pushes, deployment, Replit connection, or external messages.
+- No Roblox Studio execution, playtesting, rendering or real replication.
+  Native Luau type checking and Rojo build/sync were not run. Lua tests execute
+  pure modules or remove type syntax and use fake Roblox services.
+- Actual DataStore API serialization, network failure timing, cross-server lock
+  contention, v1-to-v2 migration of live players and BindToClose engine scheduling
+  remain unverified. No real player data was accessed and no DataStore was used.
+- Binary map geometry, safe-zone coordinate orientation/bounds, spawn/pit
+  clearance, real touch timing, carry/drop physics, wall ragdoll/fling lifecycle,
+  character health/respawn order and five/six-player engine lifecycle need Studio.
+- All framework clients' appearance, input, prompts, bootstrap delivery, Rainbow
+  animation and large inventory payloads remain unverified in the engine.
+- The framework's isolated world adapters still use placeholder geometry (Z-axis
+  corridor versus real X-axis). Its obstructed spawn retry is an existing safe
+  adapter rule; real sampling may keep an obstructed final sample. The ownership
+  flag for 67 is the requested library abstraction: its adapter credits/displays
+  ownership, whereas the real game requires placing 67 in one of six slots.
+  These are documented differences, not a claim of playable runtime parity.
+  Actual wall/shop/home/map runtime is provided by the real script set only.

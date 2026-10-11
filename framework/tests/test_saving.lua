@@ -46,8 +46,8 @@ eq(f.S.load(f.player),false);eq(f.calls,3);eq(f.writes,0);eq(#f.events,0)
 eq(f.waits[1],1);eq(f.waits[2],2);eq(f.player.kicked,C.Saving.LoadFailureMessage)
 eq(f.S.save(f.player,true),false);eq(f.writes,0);f.S.remove(f.player);eq(f.writes,0)
 -- Retries succeed and migration preserves all eight items.
-local raw={Cash=120,SpeedLevel=3,CashLevel=2,Brainrots={}}
-for i=1,8 do raw.Brainrots[i]={Name='Noodle Goblin',Value=90}end
+local raw={cash=120,speed=3,cashBoost=2,stored={}}
+for i=1,8 do raw.stored[i]={name='Noodle Goblin',value=1}end
 f=fixture(raw,{failures=2,reenter=true})
 eq(f.S.load(f.player),true);eq(f.calls,3);eq(f.profile.cash,120);eq(f.profile.upgrades.Speed,3);eq(f.profile.upgrades.Cash,2)
 eq(#f.inventory.pedestals,6);eq(#f.inventory.inventory,2);eq(f.data._session.jobId,'job-a')
@@ -133,4 +133,33 @@ writes=f.writes;eq(f.S.save(f.player),false);eq(f.writes,writes);eq(f.data.cash,
 f.failures=0;eq(f.S.save(f.player),true);eq(f.data.cash,900)
 -- A missing module state refuses to write rather than silently replacing data.
 f.inventory=nil;writes=f.writes;eq(f.S.save(f.player),false);eq(f.writes,writes)
+-- v2 is the only writable store; absent v2 reads real v1 exactly once.
+local legacy={cash=345,speed=2,inventory={{name='Diamond Sigma Frog',value=3.6,r=0.2,g=0.4,b=0.6,mat='Ice',count=2}}}
+f=fixture(nil)
+local reads,legacyReads=0,0
+function f.deps.store:GetAsync(k)eq(k,'Player_1');reads=reads+1;return copy(f.data)end
+f.deps.legacyStore={GetAsync=function(_,k)eq(k,'Player_1');legacyReads=legacyReads+1;return copy(legacy)end,
+ UpdateAsync=function()error('v1 must never be written')end,SetAsync=function()error('v1 must never be written')end}
+f.S=Factory.new(C,L,f.deps)
+eq(f.S.load(f.player),true);eq(reads,1);eq(legacyReads,1);eq(f.profile.cash,345)
+eq(#f.inventory.inventory,2);eq(f.inventory.inventory[1].mat,'Ice');eq(f.S.save(f.player),true)
+eq(legacy.cash,345);eq(legacy.inventory[1].count,2)
+f.S.remove(f.player)
+f.player.active=true
+f.S=Factory.new(C,L,f.deps);eq(f.S.load(f.player),true);eq(reads,2);eq(legacyReads,1)
+-- v1 read failure must not claim/write an empty v2 save.
+f=fixture(nil)
+function f.deps.store:GetAsync()return nil end
+local attempts=0
+f.deps.legacyStore={GetAsync=function()attempts=attempts+1;error('legacy unavailable')end}
+f.S=Factory.new(C,L,f.deps);eq(f.S.load(f.player),false);eq(attempts,3);eq(f.writes,0);eq(#f.events,0)
+-- v2 appearing between the reads and the transform supersedes the legacy data.
+f=fixture(nil)
+function f.deps.store:GetAsync()return nil end
+f.deps.legacyStore={GetAsync=function()
+ local newer=L.default();newer.cash=999;f.data=L.serialize(newer);return copy(legacy)
+end}
+f.S=Factory.new(C,L,f.deps);eq(f.S.load(f.player),true);eq(f.profile.cash,999);eq(#f.inventory.inventory,0)
+eq(C.Saving.StoreName,'BrainrotPlayerData_v2');eq(C.Saving.LegacyStoreName,'BrainrotPlayerData_v1');eq(C.Saving.KeyPrefix,'Player_')
+
 print('PASS: '..checks..' saving fake-store/lifecycle checks')

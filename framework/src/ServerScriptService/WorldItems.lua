@@ -22,7 +22,9 @@ function WorldItems.create(item, position, parent)
 	part.Name = "BrainrotItem"; part.Anchored = true; part.CanCollide = false
 	part.Size = Vector3.new(table.unpack(Config.Inventory.WorldItemSize)); part.Position = position
 	local variant = Data.GetVariant(item.variant)
-	part.Color = Config.Brainrots.VariantColours[variant.Colour]
+	local tier = Data.GetTier(item.tier)
+	part.Color = item.r and Color3.new(item.r or 0.8, item.g or 0.8, item.b or 0.8) or variant.BaseColour or (tier and tier.Colour) or Config.Brainrots.VariantColours[variant.Colour]
+	part.Material = Enum.Material[item.mat or variant.Material or (tier and tier.Material) or "SmoothPlastic"] or Enum.Material.SmoothPlastic
 	part:SetAttribute("ItemId", item.id); part.Parent = parent
 	WorldItems.label(part, item.tier .. " / " .. item.variant .. " $" .. tostring(item.value), item.variant)
 	return part

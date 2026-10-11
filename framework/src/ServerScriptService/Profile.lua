@@ -20,14 +20,18 @@ function Profile.new(Config, WheelLogic, now)
 		end
 		return WheelLogic.effectiveStats(profile.wheel, now(), base)
 	end
-	function P.applyStats(player)
+	function P.applyStats(player, refill)
 		local stats = P.getEffectiveStats(player); if not stats then return end
 		for name, value in pairs(stats) do player:SetAttribute(name, value) end
 		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
 			humanoid.WalkSpeed = stats.WalkSpeed; humanoid.UseJumpPower = true
-			humanoid.JumpPower = stats.JumpPower; humanoid.MaxHealth = stats.MaxHealth
-			humanoid.Health = math.min(humanoid.Health, stats.MaxHealth)
+			humanoid.JumpPower = stats.JumpPower
+			local oldMax = humanoid.MaxHealth or stats.MaxHealth
+			humanoid.MaxHealth = stats.MaxHealth
+			if refill then humanoid.Health = stats.MaxHealth
+			elseif stats.MaxHealth > oldMax then humanoid.Health = math.min(stats.MaxHealth, humanoid.Health + stats.MaxHealth - oldMax)
+			else humanoid.Health = math.min(humanoid.Health, stats.MaxHealth) end
 		end
 		return stats
 	end
@@ -57,9 +61,9 @@ function Profile.new(Config, WheelLogic, now)
 		local entry = { profile = profile }; entries[player] = entry
 		entry.connection = player.CharacterAdded:Connect(function(character)
 			character:WaitForChild("Humanoid")
-			if entries[player] == entry and player.Character == character then P.applyStats(player) end
+			if entries[player] == entry and player.Character == character then P.applyStats(player, true) end
 		end)
-		player:SetAttribute("Cash", profile.cash); P.applyStats(player)
+		player:SetAttribute("Cash", profile.cash); P.applyStats(player, true)
 	end
 	return P
 end

@@ -24,5 +24,8 @@ These are observations, not code. Checked October 2026. Where I could not confir
 3. Treat every Roblox-specific tool as replaceable.
 4. Final playtesting happens on a Windows/Mac machine with Studio.
 
+## Reading a binary .rbxl without Studio
+The `.rbxl` format is a header plus compressed chunks (zstd in current files). `tools/rbxl_dump.py` reads the chunks and pulls out every script's source - this is how `game-scripts/` was made. Rojo's `rojo syncback` does the same job properly if you have Rojo.
+
 ## Limits of what was done so far
 No Roblox Studio, Rojo, or Luau type checker was available in the environment where this code was written. All tests run on plain Lua with Roblox services mocked. **Nothing here has been run inside the Roblox engine.**

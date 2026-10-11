@@ -2,11 +2,14 @@
 
 local Config = require(script.Parent.Config)
 
-export type Tier = { Name: string, BaseValue: number }
+export type Tier = { Name: string, BaseValue: number, Colour: Color3, Material: string }
 export type Variant = {
 	Name: string,
 	Bonus: number,
 	Odds: number,
+	Weight: number,
+	BaseColour: Color3?,
+	Material: string?,
 	Colour: string,
 	ColourCycling: boolean,
 }

@@ -38,6 +38,7 @@ function InventoryLogic.new(Config, allowLegacyTiers)
 					(name == "pedestals" and not slotValid(i)) or not L.validItem(item) or seen[item.id] then return false end
 				seen[item.id] = true; count = count + one
 			end
+			if name == "carried" and count > Config.Inventory.CarryMax then return false end
 			if name ~= "pedestals" and count ~= #state[name] then return false end
 		end
 		if type(state.indexFound) ~= "table" then return false end
@@ -48,13 +49,14 @@ function InventoryLogic.new(Config, allowLegacyTiers)
 		local copy = L.newState()
 		for _, name in ipairs({ "carried", "inventory", "pedestals" }) do
 			for i, item in pairs(state[name]) do
-				copy[name][i] = { id = item.id, tier = item.tier, variant = item.variant, value = item.value }
+				copy[name][i] = { id = item.id, tier = item.tier, variant = item.variant, value = item.value, r = item.r, g = item.g, b = item.b, mat = item.mat }
 			end
 		end
 		for k, found in pairs(state.indexFound) do copy.indexFound[k] = found end
 		return copy
 	end
 	function L.addCarried(state, item)
+		if #state.carried >= Config.Inventory.CarryMax then return nil, "carry full" end
 		if not L.validItem(item) then return nil, "invalid item" end
 		for _, name in ipairs({ "carried", "inventory", "pedestals" }) do
 			for _, existing in pairs(state[name]) do if existing.id == item.id then return nil, "duplicate item" end end
@@ -92,7 +94,7 @@ function InventoryLogic.new(Config, allowLegacyTiers)
 		assert(finite(incomeMult) and incomeMult >= zero, "Invalid income multiplier")
 		local total = zero
 		for _, item in pairs(state.pedestals) do total = total + item.value end
-		return math.floor(total * incomeMult * Config.Math.ValueRoundingScale + one / (one + one)) / Config.Math.ValueRoundingScale
+		return total * incomeMult
 	end
 	function L.bestPedestalValue(state)
 		local best = zero

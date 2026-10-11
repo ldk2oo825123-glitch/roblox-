@@ -47,7 +47,7 @@ local function schedule(entry: Entry)
 		entry.expiry = math.min(entry.expiry or expiry, expiry)
 	end
 end
-function Wheel.Refresh(player: Player)
+function Wheel.Refresh(player: Player, refill: boolean?)
 	local entry = entries[player]
 	if not entry then return end
 	local now = os.time()
@@ -62,8 +62,11 @@ function Wheel.Refresh(player: Player)
 		humanoid.WalkSpeed = stats.WalkSpeed
 		humanoid.UseJumpPower = true
 		humanoid.JumpPower = stats.JumpPower
+		local oldMax = humanoid.MaxHealth or stats.MaxHealth
 		humanoid.MaxHealth = stats.MaxHealth
-		humanoid.Health = math.min(humanoid.Health, humanoid.MaxHealth)
+		if refill then humanoid.Health = stats.MaxHealth
+		elseif stats.MaxHealth > oldMax then humanoid.Health = math.min(stats.MaxHealth, humanoid.Health + stats.MaxHealth - oldMax)
+		else humanoid.Health = math.min(humanoid.Health, stats.MaxHealth) end
 	end
 	schedule(entry)
 end
@@ -126,8 +129,8 @@ function Wheel.Start(managedLifecycle)
 				state = copy(state), serverNow = now }
 		end
 		-- No yields between checking and consuming cooldown; simultaneous invokes
-		-- cannot spend the same spin. Duplicate 67 still consumes the daily spin.
-		local reward = Logic.rollReward(rng:NextInteger(one, Config.Wheel.RewardWeightTotal))
+		-- cannot spend the same spin. Owned 67 is excluded from the reward pool.
+		local reward = Logic.rollReward(rng:NextInteger(one, Logic.rewardWeightTotal(state.owns67)), state.owns67)
 		state.lastSpinAt = now
 		local outcome = Logic.applyReward(state, reward, now)
 		Wheel.Refresh(player)
@@ -156,7 +159,7 @@ function Wheel.Init(player: Player, savedState: State?, profile: any?)
 	entry.characterConnection = player.CharacterAdded:Connect(function(character)
 		local humanoid = character:WaitForChild("Humanoid")
 		if entries[player] == entry and player.Character == character and humanoid:IsA("Humanoid") then
-			Wheel.Refresh(player)
+			Wheel.Refresh(player, true)
 		end
 	end)
 	Wheel.Refresh(player)

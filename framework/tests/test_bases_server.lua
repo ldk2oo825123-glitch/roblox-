@@ -48,19 +48,19 @@ for i=1,6 do ps[i]=player(i);local base=B.Assign(ps[i]);eq(base~=nil,i<=5)end
 eq(B.getBase(ps[6]),nil)
 local base=B.getBase(ps[1]);eq(#base.pedestals,6);eq(#base.prompts,6)
 for i,prompt in ipairs(base.prompts)do eq(prompt.attributes.OwnerUserId,1);eq(prompt.attributes.PedestalSlot,i);eq(prompt.KeyboardKeyCode,'E')end
-eq(base.sign.Text,'Player 1\n$0.0 / 5s')
+eq(base.sign.Text,'Player 1\n$0 / 5s')
 local a={id='a',tier='Sigma Frog',variant='Gold',value=3.3}
 local best={id='best',tier='Golden Gigarot',variant='Rainbow',value=84}
 states[ps[1]].pedestals={[1]=a,[6]=best};ps[1].mult=1.25;ps[1].attributes.OwnsBrainrot67=true
 B.Refresh(ps[1]);eq(base.prompts[1].ActionText,'Pick Up');eq(base.prompts[2].ActionText,'Place')
 eq(base.labels[6].attributes.RainbowLabel,true);eq(base.display67Slot,2)
 eq(base.labels[2].Text,'Empty\n67 Brainrot $84');B.Show67(ps[1],true);eq(base.labels[2].Text,'Empty\n67 Brainrot $84')
-eq(base.sign.Text,'Player 1\n$214.1 / 5s')
-states[ps[1]].pedestals[6]=nil;B.Refresh(ps[1]);eq(base.labels[2].Text,'Empty\n67 Brainrot $3.3');eq(base.sign.Text,'Player 1\n$8.3 / 5s')
+eq(base.sign.Text,'Player 1\n$214 / 5s')
+states[ps[1]].pedestals[6]=nil;B.Refresh(ps[1]);eq(base.labels[2].Text,'Empty\n67 Brainrot $3.3');eq(base.sign.Text,'Player 1\n$8 / 5s')
 ps[1].attributes.OwnsBrainrot67=false;ps[1].ownsChanged:Fire();eq(base.display67Slot,nil);eq(base.labels[2].Text,'Empty')
-eq(base.sign.Text,'Player 1\n$4.1 / 5s')
+eq(base.sign.Text,'Player 1\n$4 / 5s')
 local credited={};B.SetCashHandler(function(p,amount)credited[p]=amount end)
-local ok,err=pcall(spawned[1]);eq(ok,false);eq(err:find('stop mock loop',1,true)~=nil,true);eq(credited[ps[1]],4.1);eq(credited[ps[2]],0)
+local ok,err=pcall(spawned[1]);eq(ok,false);eq(err:find('stop mock loop',1,true)~=nil,true);eq(credited[ps[1]],4);eq(credited[ps[2]],0)
 local oldCharacterConnection=base.characterConnection;local oldOwnsConnection=base.ownsConnection
 B.Remove(ps[1]);eq(next(states[ps[1]].pedestals),nil);eq(B.getBase(ps[1]),nil);eq(base.sign.Text,'FREE');eq(oldCharacterConnection.active,false);eq(oldOwnsConnection.active,false)
 for i,prompt in ipairs(base.prompts)do eq(prompt.attributes.OwnerUserId,nil);eq(base.labels[i].Text,'Empty');eq(base.labels[i].attributes.RainbowLabel,false)end

@@ -1,3 +1,5 @@
+> **Note (read first):** this spec was written from the chat log *before* the real scripts were extracted. Where its numbers differ from `game-scripts/`, the real game wins. See `known-gaps.md` for the list of corrections and `framework/docs/COMPATIBILITY.md` for the mapping. Sections 5 (tasks T7/T8) are superseded: the wall, shop, map and HUD already exist in `game-scripts/`.
+
 # Escape Wall for Brainrots — Refined Build Spec & Orchestration Frame
 
 Single source of truth for finishing the game. Distilled from `chat-log.txt` (the full prompt history) and the shared repo file `brainrots wall game.rbxl` (`ldk2oo825123-glitch/roblox-`). Where this file and the chat log disagree, **this file wins** (the log contains superseded designs).

@@ -1,48 +1,29 @@
-# framework/ — the game as plain-text code
+# framework/ — tested game logic library
 
-This is the functional code. It is a **Rojo project**: ordinary `.lua` files that Rojo turns into a Roblox place. It exists because the `.rbxl` file is binary and can't be edited, diffed or reviewed as text.
+`game-scripts/` contains the scripts extracted from the real playable game and is the authority for gameplay. `framework/` is a separate tested mirror with pure Lua helpers and Roblox adapters; it does not replace those scripts.
 
-## What works (and is tested)
-| Feature | Files | Tests |
-|---|---|---|
-| All numbers in one place | `src/ReplicatedStorage/Config.lua` | used by all |
-| Balance maths (wall damage, ragdoll time, fling, shop prices, price formatting, wall tier odds) | `Balance.lua` | `tests/test_balance.lua` |
-| Brainrot values and variants (Gold +10%, Diamond +20%, Emerald +30%, Rainbow +40%) | `BrainrotData.lua` | in balance tests |
-| **Daily Wheel** (6 timed potions + the rare permanent "67 Brainrot") | `WheelLogic.lua`, `Wheel.lua`, `WheelUI.client.lua` | `test_wheel*.lua` |
-| **Inventory**: carry in the danger zone (at risk), safe inventory (unlimited), drop, place on base | `InventoryLogic.lua`, `Inventory.lua`, `InventoryUI.client.lua` | `test_inventory*.lua` |
-| Brainrot spawning, 5 bases, passive income, Index (25 entries) | `Brainrots.lua`, `Bases.lua`, `WorldItems.lua`, `IndexUI.client.lua` | `test_brainrots.lua`, `test_bases_server.lua` |
-| **Saving**: versioned profile, old-save migration, session lock, autosave | `ProfileLogic.lua`, `Profile.lua`, `Saving.lua` | `test_profile.lua`, `test_saving.lua` |
+**Do not mix the two script sets in one place.** The Rojo project maps only the framework for isolated review. It is not a complete playable game: real map geometry, wall, shop, home and their UI live in the extracted script set.
 
-Also in `src/ReplicatedStorage/`: `BrainrotLogic.lua` (spawn rules) and `InventoryClient.lua` (client helper for the inventory menu).
+Run locally:
 
-## What is still empty (placeholders)
-`Wall.lua`, `Shop.lua`, `Home.lua`, `MapBuilder.lua`, `HUD.client.lua`, `ShopUI.client.lua`, `Warning.client.lua`. Each has a one-line comment saying what will go there. See `STATUS.md` (tasks T5, T7, T8).
-
-## Run the tests (no Roblox needed)
-You only need Lua 5.x installed.
 ```sh
 cd framework
 for t in tests/*.lua; do lua "$t"; done
 ```
-Every line should start with `PASS`.
 
-## Run it in Roblox (needs Windows or Mac)
-1. Install [Rojo](https://rojo.space) and its Studio plugin.
-2. In this folder run `rojo build -o game.rbxl`, or `rojo serve` and connect from Studio.
-3. Press Play. Turn on *Game Settings -> Security -> Enable Studio Access to API Services* to test saving.
-Because the wall, shop and map are still placeholders, the built place will not be a complete game yet.
+The tests cover balance, wheel, carried/safe inventory, spawning helpers, bases, profiles, real v1 migration and saving with mock services. Framework saves use `BrainrotPlayerData_v2`; the real `BrainrotPlayerData_v1` store is read-only for first-load migration.
 
-## How the code is organised
-- `src/ReplicatedStorage/` — shared code and settings (both server and player).
-- `src/ServerScriptService/` — the server decides everything that matters (money, items, hits). Players can't cheat by editing their own client.
-- `src/StarterPlayerScripts/` — what each player sees (menus, inventory, wheel).
-- `docs/REMOTES.md` — every message players can send to the server, and how each is checked.
-- `STATUS.md` — task list, what was verified, and what was not.
+See [STATUS.md](STATUS.md) for verification and limitations, [COMPATIBILITY.md](docs/COMPATIBILITY.md) for save/attribute/remote mappings, and [REMOTES.md](docs/REMOTES.md) for the framework contracts. Studio, native Luau and Rojo checks remain outstanding.
 
-## Rules the code follows
-- No numbers hidden in code: change `Config.lua` to rebalance.
-- Logic that doesn't touch Roblox is kept separate so it can be tested.
-- The server validates everything a player sends.
+## What is in here (plain English)
+| Feature | Files in `src/` | Tests |
+|---|---|---|
+| All game numbers in one place (copied from the real game) | `ReplicatedStorage/Config.lua` | used by all |
+| Wall damage / ragdoll / fling maths, shop prices, wall tier odds, resist formula | `Balance.lua` | `test_balance.lua` |
+| Brainrot tiers and Gold/Diamond/Emerald/Rainbow values | `BrainrotData.lua`, `BrainrotLogic.lua` | `test_brainrots.lua` |
+| Daily Wheel (potions + permanent 67 Brainrot) | `WheelLogic.lua`, `Wheel.lua`, `WheelUI.client.lua` | `test_wheel*.lua` |
+| Carried (max 3, at risk) vs stored (unlimited, safe) inventory, Index | `InventoryLogic.lua`, `Inventory.lua`, `InventoryUI.client.lua`, `IndexUI.client.lua` | `test_inventory*.lua` |
+| 5 bases, pedestals, passive income | `Bases.lua`, `WorldItems.lua` | `test_bases_server.lua` |
+| Saving and moving old real-game saves forward | `ProfileLogic.lua`, `Profile.lua`, `Saving.lua` | `test_profile.lua`, `test_saving.lua`, `test_migration.lua` |
 
-## Not verified
-No Roblox Studio, Rojo or Luau type checker was available when this was written. See `STATUS.md` for the exact list.
+Folders: `ReplicatedStorage` = shared code, `ServerScriptService` = the server decides everything that matters, `StarterPlayerScripts` = what each player sees.

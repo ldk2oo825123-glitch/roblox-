@@ -5,6 +5,7 @@ function Saving.new(Config, Logic, deps)
 	local S, sessions = {}, {}
 	local zero, one = Config.Math.Zero, Config.Math.One
 	local policy = Config.Saving
+	assert(policy.StoreName ~= policy.LegacyStoreName, "Legacy DataStore is read-only")
 	local offline, closing = false, false
 	local sequence = zero
 	local function key(player) return policy.KeyPrefix .. tostring(player.UserId) end
@@ -49,24 +50,34 @@ function Saving.new(Config, Logic, deps)
 		sequence = sequence + one
 		local entry = { ready = false, token = deps.jobId .. ":" .. tostring(sequence), busy = false, nextSave = deps.now() + policy.IntervalSeconds }
 		sessions[player] = entry -- Failed loads stay explicitly un-saveable.
-		local reason, loaded
+		local reason, loaded, legacy
 		local ok, result = true, nil
 		if not offline then
-			ok, result = retry(function()
-				reason = nil
-				return deps.store:UpdateAsync(key(player), function(raw)
-					local profile, invalid = Logic.deserialize(raw)
-					if not profile then reason = invalid; return nil end
-					local lock = type(raw) == "table" and raw._session
-					if type(lock) == "table" and lock.token ~= entry.token then
-						if type(lock.at) ~= "number" or lock.at ~= lock.at or math.abs(lock.at) == math.huge
-							or lock.at + policy.SessionLockSeconds > deps.now() then reason = "session locked"; return nil end
-					end
-					local data = Logic.serialize(profile)
-					data._session = { token = entry.token, jobId = deps.jobId, at = deps.now() }
-					return data
+			-- Read before UpdateAsync: transforms cannot yield. A concurrent v2 write wins.
+			if deps.legacyStore then
+				ok, result = retry(function() return deps.store:GetAsync(key(player)) end)
+				if ok and result == nil then
+					ok, legacy = retry(function() return deps.legacyStore:GetAsync(key(player)) end)
+					if not ok then result = legacy end
+				end
+			end
+			if ok then
+				ok, result = retry(function()
+					reason = nil
+					return deps.store:UpdateAsync(key(player), function(raw)
+						local profile, invalid = Logic.deserialize(raw or legacy, deps.now())
+						if not profile then reason = invalid; return nil end
+						local lock = type(raw) == "table" and raw._session
+						if type(lock) == "table" and lock.token ~= entry.token then
+							if type(lock.at) ~= "number" or lock.at ~= lock.at or math.abs(lock.at) == math.huge
+								or lock.at + policy.SessionLockSeconds > deps.now() then reason = "session locked"; return nil end
+						end
+						local data = Logic.serialize(profile)
+						data._session = { token = entry.token, jobId = deps.jobId, at = deps.now() }
+						return data
+					end)
 				end)
-			end)
+			end
 			if not ok and apiDisabled(result) then
 				offline = true; warnFailure("Studio API services are disabled; running without persistence")
 			elseif ok and type(result) == "table" and type(result._session) == "table" and result._session.token == entry.token then
@@ -100,7 +111,7 @@ function Saving.new(Config, Logic, deps)
 		if not profile or not inventory or not wheel then return nil, "state missing; refusing blank save" end
 		return Logic.validate({ version = profile.version, cash = profile.cash, upgrades = profile.upgrades,
 			pedestals = inventory.pedestals, inventory = inventory.inventory, indexFound = inventory.indexFound,
-			wheel = wheel, savedAt = deps.now() }) -- carried is deliberately excluded.
+			wheel = wheel, legacyDiscovered = profile.legacyDiscovered, savedAt = deps.now() }) -- carried is deliberately excluded.
 	end
 	function S.save(player, release, deadline)
 		local entry = sessions[player]

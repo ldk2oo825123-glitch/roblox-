@@ -12,7 +12,7 @@ local nodes = {}
 local folder, inventory
 local started = false
 local zero, one = Config.Math.Zero, Config.Math.One
--- MapBuilder must call this BEFORE Start and whenever pit geometry changes.
+-- The world adapter must call this BEFORE Start and whenever pit geometry changes.
 -- Rects: array of world-space {MinX,MaxX,MinZ,MaxZ}; bounds include pit rims.
 -- Existing spawns over updated pits are relocated rather than left in holes.
 function Brainrots.SetPitRects(rects)
@@ -35,7 +35,7 @@ function Brainrots.Start(inventoryModule)
 	started = true; inventory = inventoryModule
 	folder = Instance.new("Folder"); folder.Name = "DangerBrainrots"; folder.Parent = workspace
 	for tier = one, #Config.Brainrots.Tiers do
-		for _ = one, Config.Brainrots.SpawnsPerTier do
+		for _ = one, Config.Brainrots.SpawnsPerTier[tier] do
 			local node = {}; table.insert(nodes, node)
 			node.respawn = function()
 				local point = Logic.spawnPoint(tier, pits, function(low, high) return rng:NextNumber(low, high) end)

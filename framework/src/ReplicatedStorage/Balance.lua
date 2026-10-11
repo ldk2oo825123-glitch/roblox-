@@ -20,7 +20,7 @@ function Balance.new(Config)
 	end
 
 	function helpers.wallDamage(speed)
-		return interpolate(speed, Config.Wall.Damage)
+		return math.floor(interpolate(speed, Config.Wall.Damage))
 	end
 
 	function helpers.wallRagdollSeconds(speed)
@@ -36,7 +36,7 @@ function Balance.new(Config)
 			"Purchases must be a non-negative integer")
 		for _, upgrade in ipairs(Config.Shop.Upgrades) do
 			if upgrade.Name == name then
-				return math.floor(upgrade.BasePrice * Config.Shop.PriceCurve.GrowthFactor ^ purchases)
+				return math.floor(upgrade.BasePrice * upgrade.Growth ^ purchases)
 			end
 		end
 		error("Unknown upgrade: " .. tostring(name))
@@ -70,6 +70,16 @@ function Balance.new(Config)
 		error("Wall roll exceeds total tier weight")
 	end
 
+	function helpers.resistMultiplier(level, potionActive)
+		assert(finiteNumber(level) and level >= zero and level == math.floor(level), "Invalid resist level")
+		return math.max(Config.Resist.MinimumMultiplier, one - Config.Resist.PerLevel * (level + (potionActive and Config.Resist.PotionLevels or zero)))
+	end
+	function helpers.wallSpeed(tier, roll)
+		assert(finiteNumber(roll) and roll >= zero and roll <= one, "Invalid speed roll")
+		local scale = Config.Math.ValueRoundingScale
+		local low, high = tier.MinSpeed * scale, tier.MaxSpeed * scale
+		return math.min(high, low + math.floor(roll * (high - low + one))) / scale
+	end
 	return helpers
 end
 

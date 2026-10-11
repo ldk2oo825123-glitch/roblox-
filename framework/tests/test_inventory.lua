@@ -19,7 +19,7 @@ eq(#s.inventory,2); eq(L.dropFromInventory(s,'b'),b); eq(#s.inventory,1); eq(s.i
 eq(L.dropFromInventory(s,'missing'),nil)
 for _,slot in ipairs({0,7,1.5,'1',false,math.huge,0/0}) do eq(L.placeOnPedestal(s,'a',slot),nil); eq(#s.inventory,1); eq(L.pickUpFromPedestal(s,slot),nil) end
 eq(L.placeOnPedestal(s,'missing',1),nil); eq(L.placeOnPedestal(s,'a',1),a)
-eq(L.bestPedestalValue(s),3.3); eq(L.incomePerTick(s,1.25),4.1)
+eq(L.bestPedestalValue(s),3.3); eq(L.incomePerTick(s,1.25),4.125)
 L.addCarried(s,b); L.moveCarriedToInventory(s)
 eq(L.placeOnPedestal(s,'b',1),nil); eq(s.inventory[1],b)
 eq(L.pickUpFromPedestal(s,1),a)
@@ -35,10 +35,13 @@ eq(L.canAccessBase(p,base,1,0/0),false)
 eq(L.inSafeZone({X=0,Y=3,Z=-1}),true);eq(L.inSafeZone({X=0,Y=3,Z=1}),false)
 eq(L.inSafeZone({X=161,Y=3,Z=-1}),false);eq(L.inSafeZone({X=0,Y=61,Z=-1}),false)
 s=L.newState()
-for i=1,10000 do s.carried[i]=item(i) end -- independent bulk fixture, no implicit capacity limit
-local moved=L.moveCarriedToInventory(s);eq(#moved,10000);eq(#s.inventory,10000);eq(#s.carried,0)
+for i=1,10000 do assert(L.addCarried(s,item(i))); L.moveCarriedToInventory(s) end
+eq(#s.inventory,10000);eq(#s.carried,0)
 eq(L.addCarried(s,item(10001)),s.carried[1]);eq(#s.carried,1)
 eq(#L.dropCarried(s,'death'),1);eq(#s.inventory,10000)
+for i=1,3 do eq(L.addCarried(s,item('capacity'..i))~=nil,true) end
+local refused,reason=L.addCarried(s,item('fourth'));eq(refused,nil);eq(reason,'carry full');eq(#s.carried,3)
+eq(L.validateState(s),true);L.dropCarried(s,'death')
 local groups=L.groupInventory(s);eq(#groups,1);eq(groups[1].count,10000);eq(#groups[1].items,10000)
 L.addCarried(s,item('diamond','Sigma Frog','Diamond',3.6));L.moveCarriedToInventory(s)
 eq(#L.groupInventory(s),2)
@@ -56,9 +59,11 @@ for _,tier in ipairs(Config.Brainrots.Tiers) do
  for _,variant in ipairs(Config.Brainrots.Variants) do
   local v=math.floor(tier.BaseValue*(1+variant.Bonus)*10+0.5)/10
   eq(L.addCarried(s,item(tier.Name..variant.Name,tier.Name,variant.Name,v))~=nil,true)
+  L.moveCarriedToInventory(s)
  end
+ L.moveCarriedToInventory(s)
 end
-eq(L.indexProgress(s),0);L.moveCarriedToInventory(s);local found,total=L.indexProgress(s);eq(found,25);eq(total,25)
+eq(#s.carried,0);L.moveCarriedToInventory(s);local found,total=L.indexProgress(s);eq(found,25);eq(total,25)
 eq(#L.groupInventory(s),25)
 L.placeOnPedestal(s,'Golden GigarotRainbow',6);L.placeOnPedestal(s,'Sigma FrogGold',1)
 eq(W.brainrot67Value({[6]=s.pedestals[6].value,[1]=s.pedestals[1].value}),L.bestPedestalValue(s));eq(L.bestPedestalValue(s),84)

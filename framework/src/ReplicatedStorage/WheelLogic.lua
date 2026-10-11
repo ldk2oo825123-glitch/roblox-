@@ -31,11 +31,14 @@ function WheelLogic.new(Config)
 		local remaining = math.max(zero, helpers.nextSpinAt(state) - now)
 		return remaining == zero, remaining
 	end
-	function helpers.rollReward(roll)
-		assert(integer(roll) and roll >= one and roll <= policy.RewardWeightTotal, "Invalid wheel roll")
+	function helpers.rewardWeightTotal(owns67)
+		return policy.RewardWeightTotal - (owns67 and policy.RewardWeights.Brainrot67 or zero)
+	end
+	function helpers.rollReward(roll, owns67)
+		assert(integer(roll) and roll >= one and roll <= helpers.rewardWeightTotal(owns67), "Invalid wheel roll")
 		local cumulative = zero
 		for _, name in ipairs(policy.RewardOrder) do
-			cumulative = cumulative + policy.RewardWeights[name]
+			cumulative = cumulative + ((owns67 and name == "Brainrot67") and zero or policy.RewardWeights[name])
 			if roll <= cumulative then return name end
 		end
 		error("Invalid wheel weights")
@@ -57,33 +60,29 @@ function WheelLogic.new(Config)
 			state.owns67 = true
 			return "granted"
 		end
-		state.potions[rewardName] = math.min(now + policy.PotionStackCapSeconds,
-			math.max(now, state.potions[rewardName] or now) + policy.PotionDurationSeconds)
+		state.potions[rewardName] = math.max(now, state.potions[rewardName] or now) + policy.PotionDurationSeconds
 		return "granted"
 	end
 	function helpers.potionModifiers(state, now)
-		local result = { walkSpeedMult = one, incomeMult = one, maxHealthBonus = zero,
-			ragdollReduction = zero, knockbackReduction = zero, jumpBonus = zero }
+		local result = { walkSpeedBonus = zero, incomeMult = one, maxHealthBonus = zero,
+			ragdollLevels = zero, knockbackLevels = zero, jumpBonus = zero }
 		for name in pairs(helpers.activePotions(state, now)) do
 			for key, value in pairs(policy.PotionEffects[name]) do result[key] = value end
 		end
-		result.ragdollReduction = math.min(policy.MaxCombinedReduction, result.ragdollReduction)
-		result.knockbackReduction = math.min(policy.MaxCombinedReduction, result.knockbackReduction)
-		result.jumpBonus = math.min(Config.Jump.MaxEffectiveJumpPower, result.jumpBonus)
 		return result
 	end
 	-- Upgrade stats are supplied separately: wheel state stores no upgrade data.
 	function helpers.effectiveStats(state, now, base)
 		local m = helpers.potionModifiers(state, now)
-		return { WalkSpeed = base.WalkSpeed * m.walkSpeedMult,
-			JumpPower = math.min(Config.Jump.MaxEffectiveJumpPower, base.JumpPower + m.jumpBonus),
+		return { WalkSpeed = base.WalkSpeed + m.walkSpeedBonus,
+			JumpPower = base.JumpPower + m.jumpBonus,
 			MaxHealth = base.MaxHealth + m.maxHealthBonus,
 			IncomeMult = base.IncomeMult * m.incomeMult,
-			RagdollReduction = math.min(policy.MaxCombinedReduction, base.RagdollReduction + m.ragdollReduction),
-			KnockbackReduction = math.min(policy.MaxCombinedReduction, base.KnockbackReduction + m.knockbackReduction) }
+			RagdollReduction = one - math.max(Config.Resist.MinimumMultiplier, one - Config.Resist.PerLevel * ((base.RagdollLevel or zero) + m.ragdollLevels)),
+			KnockbackReduction = one - math.max(Config.Resist.MinimumMultiplier, one - Config.Resist.PerLevel * ((base.KnockbackLevel or zero) + m.knockbackLevels)) }
 	end
 	function helpers.brainrot67Value(pedestalValues)
-		local highest = zero
+		local highest = one -- BaseServer.itemValue: dynamic items have a minimum value of 1.
 		for _, value in pairs(pedestalValues) do
 			assert(type(value) == "number" and value == value and value >= zero and value < math.huge,
 				"Pedestal value must be finite and non-negative")

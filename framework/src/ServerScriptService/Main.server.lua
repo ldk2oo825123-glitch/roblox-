@@ -18,6 +18,7 @@ Wheel.Start(true); Inventory.Start(true); Bases.Start(Inventory)
 Bases.SetCashHandler(Profile.addCash)
 local Saving = require(script.Parent.Saving).new(Config, Logic, {
 	store = DataStoreService:GetDataStore(Config.Saving.StoreName),
+	legacyStore = DataStoreService:GetDataStore(Config.Saving.LegacyStoreName),
 	Profile = Profile, Wheel = Wheel, Inventory = Inventory, Bases = Bases,
 	jobId = game.JobId ~= "" and game.JobId or HttpService:GenerateGUID(false), isStudio = RunService:IsStudio(),
 	now = os.time, clock = os.clock, wait = task.wait, spawn = task.spawn, warn = warn,
@@ -28,5 +29,5 @@ Players.PlayerRemoving:Connect(function(player) Saving.remove(player) end)
 game:BindToClose(function() Saving.close() end)
 RunService.Heartbeat:Connect(function() Saving.tick() end)
 for _, player in ipairs(Players:GetPlayers()) do task.spawn(function() Saving.load(player) end) end
--- TODO(MapBuilder): call Brainrots.SetPitRects(worldSpaceRects) before Start.
+-- Geometry adapter: call Brainrots.SetPitRects(worldSpaceRects) before Start.
 Brainrots.Start(Inventory)

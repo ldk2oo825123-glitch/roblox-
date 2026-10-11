@@ -25,25 +25,34 @@ equal(allowed, false); equal(remaining, 1)
 allowed, remaining = Wheel.canSpin(state, 186400)
 equal(allowed, true); equal(remaining, 0)
 equal(Wheel.nextSpinAt(state), 186400)
-local boundaries = { {1, "SpeedBoost"}, {1660, "SpeedBoost"}, {1661, "DoubleMoney"},
-	{9960, "KnockbackResist"}, {9961, "Brainrot67"}, {10000, "Brainrot67"} }
+local boundaries = { {1, "SpeedBoost"}, {1800, "SpeedBoost"}, {1801, "DoubleMoney"},
+	{9400, "KnockbackResist"}, {9401, "Brainrot67"}, {9467, "Brainrot67"} }
 for _, entry in ipairs(boundaries) do equal(Wheel.rollReward(entry[1]), entry[2]) end
 local weights, total = {}, 0
 for _, name in ipairs(Config.Wheel.RewardOrder) do
 	equal(Config.Wheel.RewardWeights[name] % 1, 0)
 	total = total + Config.Wheel.RewardWeights[name]
 end
-equal(total, 10000)
-for roll = 1, 10000 do
+equal(total, 9467)
+equal(Wheel.rewardWeightTotal(true), 9400)
+local ownedWeights = {}
+for roll = 1, 9400 do
+ local name = Wheel.rollReward(roll, true)
+ assert(name ~= "Brainrot67")
+ ownedWeights[name] = (ownedWeights[name] or 0) + 1
+end
+for name, weight in pairs(Config.Wheel.RewardWeights) do if name ~= "Brainrot67" then equal(ownedWeights[name], weight) end end
+rejects(function() Wheel.rollReward(9401, true) end)
+for roll = 1, 9467 do
 	local name = Wheel.rollReward(roll)
 	weights[name] = (weights[name] or 0) + 1
 end
 for name, weight in pairs(Config.Wheel.RewardWeights) do equal(weights[name], weight) end
-local default = { walkSpeedMult = 1, incomeMult = 1, maxHealthBonus = 0,
-	ragdollReduction = 0, knockbackReduction = 0, jumpBonus = 0 }
-local expected = { SpeedBoost = {walkSpeedMult = 1.5}, DoubleMoney = {incomeMult = 2},
-	HealthBoost = {maxHealthBonus = 100}, RagdollResist = {ragdollReduction = 0.4},
-	JumpBoost = {jumpBonus = 15}, KnockbackResist = {knockbackReduction = 0.4} }
+local default = { walkSpeedBonus = 0, incomeMult = 1, maxHealthBonus = 0,
+	ragdollLevels = 0, knockbackLevels = 0, jumpBonus = 0 }
+local expected = { SpeedBoost = {walkSpeedBonus = 8}, DoubleMoney = {incomeMult = 2},
+	HealthBoost = {maxHealthBonus = 50}, RagdollResist = {ragdollLevels = 5},
+	JumpBoost = {jumpBonus = 25}, KnockbackResist = {knockbackLevels = 5} }
 for name, effects in pairs(expected) do
 	state = fresh()
 	equal(Wheel.applyReward(state, name, 100000), "granted")
@@ -57,22 +66,22 @@ for name, effects in pairs(expected) do
 	Wheel.applyReward(state, name, 101100)
 	equal(state.potions[name], 102800)
 	for _ = 1, 10 do Wheel.applyReward(state, name, 101100) end
-	equal(state.potions[name], 104700)
-	-- Cap is remaining time from the current grant, not original grant time.
+	equal(state.potions[name], 111800)
+	-- Each grant extends the absolute expiry by 900, with no cap.
 	Wheel.applyReward(state, name, 101200)
-	equal(state.potions[name], 104800)
-	Wheel.applyReward(state, name, 104800)
-	equal(state.potions[name], 105700)
+	equal(state.potions[name], 112700)
+	Wheel.applyReward(state, name, 112700)
+	equal(state.potions[name], 113600)
 end
 state = fresh()
 for name in pairs(expected) do Wheel.applyReward(state, name, 100000) end
-local base = {WalkSpeed = 36, JumpPower = 65, MaxHealth = 350, IncomeMult = 3.5,
-	RagdollReduction = 0.8, KnockbackReduction = 0.8}
+local base = {WalkSpeed = 36, JumpPower = 100, MaxHealth = 350, IncomeMult = 3.5,
+	RagdollLevel = 10, KnockbackLevel = 10}
 local effective = Wheel.effectiveStats(clone(state), 100899, base)
-equal(effective.WalkSpeed, 54); equal(effective.JumpPower, 70); equal(effective.MaxHealth, 450)
+equal(effective.WalkSpeed, 44); equal(effective.JumpPower, 125); equal(effective.MaxHealth, 400)
 equal(effective.IncomeMult, 7); equal(effective.RagdollReduction, 0.9); equal(effective.KnockbackReduction, 0.9)
 effective = Wheel.effectiveStats(state, 100900, base)
-equal(effective.WalkSpeed, 36); equal(effective.JumpPower, 65); equal(effective.MaxHealth, 350)
+equal(effective.WalkSpeed, 36); equal(effective.JumpPower, 100); equal(effective.MaxHealth, 350)
 equal(effective.IncomeMult, 3.5); equal(effective.RagdollReduction, 0.8); equal(effective.KnockbackReduction, 0.8)
 equal(next(state.potions), nil)
 local pedestals = {1, 3, 84}
@@ -81,7 +90,7 @@ pedestals[3] = nil
 equal(Wheel.brainrot67Value(pedestals), 3)
 pedestals[6] = 100
 equal(Wheel.brainrot67Value(pedestals), 100)
-equal(Wheel.brainrot67Value({}), 0)
+equal(Wheel.brainrot67Value({}), 1)
 state = fresh()
 equal(Wheel.applyReward(state, "Brainrot67", 100000), "granted")
 equal(state.owns67, true)
@@ -98,9 +107,9 @@ end
 -- Saved absolute expiries consume offline time; snapshots survive rejoin unchanged.
 state = fresh(); Wheel.applyReward(state, "SpeedBoost", 100000)
 local restored = clone(state)
-equal(Wheel.potionModifiers(restored, 100500).walkSpeedMult, 1.5)
+equal(Wheel.potionModifiers(restored, 100500).walkSpeedBonus, 8)
 equal(restored.potions.SpeedBoost, 100900)
-equal(Wheel.potionModifiers(restored, 100900).walkSpeedMult, 1)
+equal(Wheel.potionModifiers(restored, 100900).walkSpeedBonus, 0)
 rejects(function() Wheel.rollReward(0) end)
 rejects(function() Wheel.rollReward(10001) end)
 rejects(function() Wheel.rollReward(1.5) end)
@@ -112,4 +121,4 @@ equal(Wheel.validateState({ lastSpinAt = -1, potions = {}, owns67 = false }), fa
 equal(Wheel.validateState({ lastSpinAt = 0, potions = {Fake = 123}, owns67 = false }), false)
 equal(Wheel.validateState({ lastSpinAt = 0, potions = {SpeedBoost = math.huge}, owns67 = false }), false)
 equal(Wheel.validateState({ lastSpinAt = 0, potions = {}, owns67 = "true" }), false)
-print("PASS: " .. checks .. " wheel checks (all 10000 rolls enumerated)")
+print("PASS: " .. checks .. " wheel checks (all 9467 rolls enumerated)")

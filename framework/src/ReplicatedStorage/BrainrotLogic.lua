@@ -8,7 +8,7 @@ function BrainrotLogic.new(Config)
 		local sum = zero
 		for _, variant in ipairs(Config.Brainrots.Variants) do
 			sum = sum + variant.Odds
-			if roll < sum then return variant.Name end
+			if roll <= sum then return variant.Name end
 		end
 		return Config.Brainrots.Variants[#Config.Brainrots.Variants].Name
 	end
