@@ -1,0 +1,99 @@
+{
+  "name": "Escape Wall for Brainrots",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Config": {
+        "$path": "src/ReplicatedStorage/Config.lua"
+      },
+      "Remotes": {
+        "$path": "src/ReplicatedStorage/Remotes.lua"
+      },
+      "Balance": {
+        "$path": "src/ReplicatedStorage/Balance.lua"
+      },
+      "BrainrotData": {
+        "$path": "src/ReplicatedStorage/BrainrotData.lua"
+      },
+      "WheelLogic": {
+        "$path": "src/ReplicatedStorage/WheelLogic.lua"
+      },
+      "InventoryLogic": {
+        "$path": "src/ReplicatedStorage/InventoryLogic.lua"
+      },
+      "BrainrotLogic": {
+        "$path": "src/ReplicatedStorage/BrainrotLogic.lua"
+      },
+      "InventoryClient": {
+        "$path": "src/ReplicatedStorage/InventoryClient.lua"
+      },
+      "ProfileLogic": {
+        "$path": "src/ReplicatedStorage/ProfileLogic.lua"
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "Main": {
+        "$path": "src/ServerScriptService/Main.server.lua"
+      },
+      "Wall": {
+        "$path": "src/ServerScriptService/Wall.lua"
+      },
+      "Brainrots": {
+        "$path": "src/ServerScriptService/Brainrots.lua"
+      },
+      "Bases": {
+        "$path": "src/ServerScriptService/Bases.lua"
+      },
+      "Inventory": {
+        "$path": "src/ServerScriptService/Inventory.lua"
+      },
+      "Shop": {
+        "$path": "src/ServerScriptService/Shop.lua"
+      },
+      "Wheel": {
+        "$path": "src/ServerScriptService/Wheel.lua"
+      },
+      "Saving": {
+        "$path": "src/ServerScriptService/Saving.lua"
+      },
+      "Home": {
+        "$path": "src/ServerScriptService/Home.lua"
+      },
+      "MapBuilder": {
+        "$path": "src/ServerScriptService/MapBuilder.lua"
+      },
+      "WorldItems": {
+        "$path": "src/ServerScriptService/WorldItems.lua"
+      },
+      "Profile": {
+        "$path": "src/ServerScriptService/Profile.lua"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "HUD": {
+          "$path": "src/StarterPlayerScripts/HUD.client.lua"
+        },
+        "ShopUI": {
+          "$path": "src/StarterPlayerScripts/ShopUI.client.lua"
+        },
+        "InventoryUI": {
+          "$path": "src/StarterPlayerScripts/InventoryUI.client.lua"
+        },
+        "IndexUI": {
+          "$path": "src/StarterPlayerScripts/IndexUI.client.lua"
+        },
+        "WheelUI": {
+          "$path": "src/StarterPlayerScripts/WheelUI.client.lua"
+        },
+        "Warning": {
+          "$path": "src/StarterPlayerScripts/Warning.client.lua"
+        }
+      }
+    }
+  }
+}
